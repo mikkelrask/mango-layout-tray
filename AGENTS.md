@@ -19,6 +19,9 @@ GPUI was evaluated first; its Wayland backend lacks layer-shell surfaces.
 Run `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and
 `cargo test`. Verify UI changes on a running Wayland/Mango session. Restore any
 layout changed during testing. Keep comments sparse and commits small.
+`scripts/live-smoke.py` uses AT-SPI against a real session and restores the
+original layout. Quit any existing app instance first. Optional `WTYPE` enables
+keyboard checks. Keep screenshot captures limited to the app's own panel.
 Update README when behavior or installation changes. Apply the humanizer skill
 when available; write plain, specific prose either way.
 

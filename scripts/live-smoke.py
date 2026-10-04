@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 
 import gi
 
@@ -85,7 +86,7 @@ with tempfile.TemporaryDirectory(prefix="mango-tray-smoke-") as directory:
     env = dict(os.environ, XDG_CONFIG_HOME=directory)
     config_path = Path(directory) / "mango-layout-tray/config.toml"
     config_path.parent.mkdir()
-    config_path.write_text('theme = "dark"\n')
+    config_path.write_text(f'theme = "{os.environ.get("MANGO_SMOKE_THEME", "dark")}"\n')
     log_path = Path(directory) / "app.log"
     with log_path.open("w") as log:
         process = subprocess.Popen([str(BINARY), "--show"], env=env, stdout=log, stderr=log)
@@ -114,6 +115,17 @@ with tempfile.TemporaryDirectory(prefix="mango-tray-smoke-") as directory:
             switch = find(role="switch")
             assert switch.get_action_iface().do_action(0)
             wait_for(lambda: "drawer = true" in config_path.read_text(), "Drawer setting did not persist")
+            switches = [n for n in walk(switch.get_parent().get_parent()) if n.get_role_name() == "switch"]
+            assert switches[1].get_action_iface().do_action(0)
+            autostart = Path(directory) / "autostart/mango-layout-tray.desktop"
+            wait_for(autostart.exists, "Autostart entry was not created")
+            assert str(BINARY) in autostart.read_text()
+            assert switches[1].get_action_iface().do_action(0)
+            wait_for(lambda: not autostart.exists(), "Autostart entry was not removed")
+            scroller = find("Scroller", "label")
+            down = next(n for n in walk(scroller.get_parent()) if n.get_role_name() == "button" and n.get_name() == "Move down")
+            assert down.get_action_iface().do_action(0)
+            wait_for(lambda: tomllib.loads(config_path.read_text()).get("order", [])[:3] == ["tile", "monocle", "scroller"], "Layout order did not persist")
             click("Done")
             subprocess.run([str(BINARY), "--show"], env=env, check=True)
             wait_for(lambda: find("Find your flow.", "label"), "Drawer did not open")

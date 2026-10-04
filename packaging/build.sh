@@ -12,6 +12,9 @@ install -Dm644 data/mango-layout-tray.desktop "$stage/usr/share/applications/man
 install -Dm644 data/mango-layout-tray.svg "$stage/usr/share/icons/hicolor/scalable/apps/mango-layout-tray.svg"
 install -Dm644 LICENSE "$stage/usr/share/licenses/mango-layout-tray/LICENSE"
 install -Dm644 README.md "$stage/usr/share/doc/mango-layout-tray/README.md"
+for image in docs/screenshots/*.png; do
+    install -Dm644 "$image" "$stage/usr/share/doc/mango-layout-tray/$image"
+done
 layer_lib=$(pkg-config --variable=libdir gtk4-layer-shell-0)/libgtk4-layer-shell.so.0
 install -Dm755 "$(readlink -f "$layer_lib")" "$stage/usr/lib/mango-layout-tray/libgtk4-layer-shell.so.0"
 install -Dm644 packaging/gtk4-layer-shell.LICENSE "$stage/usr/share/licenses/mango-layout-tray/gtk4-layer-shell.LICENSE"

@@ -9,6 +9,10 @@ you invoked it. It supports all 14 MangoWM layouts, search, favorites, a compact
 view, and a taller drawer. Colors come from your GTK theme; light and dark
 options are available in Settings.
 
+![Compact picker in dark mode](docs/screenshots/compact.png)
+
+[Drawer preview](docs/screenshots/drawer.png) · [Light mode](docs/screenshots/light.png)
+
 ## Install
 
 You need MangoWM with the JSON socket IPC used by `mmsg get all-monitors`, a
@@ -152,8 +156,23 @@ make check
 cargo run -- --show
 ```
 
+`scripts/live-smoke.py` exercises all 14 layouts against a live Mango session,
+checks tray updates, search, favorites, ordering, autostart, and drawer mode,
+then restores the original layout. Quit the app first. It uses Python 3.11 or
+newer with PyGObject and the AT-SPI typelib, plus `mmsg` and `busctl`:
+
+```sh
+python3 scripts/live-smoke.py target/release/mango-layout-tray
+WTYPE=/usr/bin/wtype python3 scripts/live-smoke.py # Also test keyboard input
+```
+
+The unit tests cover IPC responses, changed tags, monitor targeting, and focus
+restoration after both successful and failed selections. Multi-monitor behavior
+has mock coverage; the live test machine currently has one monitor.
+
 The app connects directly to Mango's Unix socket using the same newline-delimited
-JSON protocol as `mmsg`. State changes arrive through `watch all-monitors`; it
+JSON protocol as `mmsg`. The tray registers when a host becomes available, including after a panel restart.
+State changes arrive through `watch all-monitors`; it
 does not poll or spawn commands while idle. Disconnects trigger a reconnect
 attempt every three seconds.
 
