@@ -12,7 +12,7 @@ flowboxchild { padding: 0; border-radius: 12px; }
 .layout-choice { padding: 12px 10px 4px; background: transparent; border: none; box-shadow: none; border-radius: 11px 11px 0 0; }
 .layout-choice:hover { background: alpha(@theme_selected_bg_color, 0.12); }
 .layout-choice:focus-visible { outline: 2px solid @theme_selected_bg_color; outline-offset: -2px; }
-.layout-choice.current { color: @theme_selected_bg_color; background: alpha(@theme_selected_bg_color, 0.12); }
+.layout-choice.current { color: @theme_fg_color; background: alpha(@theme_selected_bg_color, 0.18); box-shadow: inset 0 0 0 2px @theme_selected_bg_color; }
 .layout-name { font-size: 12px; font-weight: 600; }
 .card-meta { padding: 0 8px 4px 10px; }
 .symbol { font-family: monospace; font-size: 11px; opacity: 0.5; }

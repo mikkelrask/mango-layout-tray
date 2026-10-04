@@ -118,9 +118,11 @@ fn icon(symbol: &str, size: i32) -> Icon {
     let data = surface
         .data()
         .unwrap()
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .flat_map(|pixel| {
-            let native = u32::from_ne_bytes(pixel.try_into().unwrap());
+            let native = u32::from_ne_bytes(*pixel);
             native.to_be_bytes()
         })
         .collect();

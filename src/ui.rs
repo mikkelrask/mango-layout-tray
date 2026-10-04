@@ -112,7 +112,7 @@ fn layer_window(app: &gtk::Application, monitor_name: Option<&str>) -> gtk::Appl
         window.set_namespace(Some("mango-layout-tray"));
         window.set_layer(Layer::Overlay);
         window.set_keyboard_mode(KeyboardMode::Exclusive);
-        window.set_exclusive_zone(0);
+        window.set_exclusive_zone(-1);
         for edge in [Edge::Top, Edge::Bottom, Edge::Left, Edge::Right] {
             window.set_anchor(edge, true);
         }
@@ -248,7 +248,7 @@ pub fn show_picker(state: &State, target: Target) {
     });
     let flow = grid.clone();
     let state_search = state.clone();
-    search.connect_search_changed(move |search| {
+    search.connect_changed(move |search| {
         *query.borrow_mut() = search.text().to_lowercase().replace('_', " ");
         flow.invalidate_filter();
         if let Some(status) = &state_search.borrow().status {
@@ -263,6 +263,18 @@ pub fn show_picker(state: &State, target: Target) {
             } else {
                 "Select a layout to apply it. ★ adds a favorite."
             });
+        }
+    });
+    let state_enter = state.clone();
+    search.connect_activate(move |search| {
+        let query = search.text().to_lowercase().replace('_', " ");
+        if let Some((_, button)) = state_enter
+            .borrow()
+            .cards
+            .iter()
+            .find(|(layout, _)| layout.title.to_lowercase().contains(&query))
+        {
+            button.emit_clicked();
         }
     });
     scroll.set_child(Some(&grid));
@@ -283,6 +295,7 @@ pub fn show_picker(state: &State, target: Target) {
     overlay.add_overlay(&panel);
     window.set_child(Some(&overlay));
     let controller = gtk::EventControllerKey::new();
+    controller.set_propagation_phase(gtk::PropagationPhase::Capture);
     let weak = window.downgrade();
     let state_key = state.clone();
     let search_key = search.clone();
@@ -298,11 +311,17 @@ pub fn show_picker(state: &State, target: Target) {
             show_settings(&state_key);
             return glib::Propagation::Stop;
         }
+        let search_focused = weak
+            .upgrade()
+            .and_then(|w| gtk::prelude::GtkWindowExt::focus(&w))
+            .is_some_and(|f| {
+                f == search_key.clone().upcast::<gtk::Widget>() || f.is_ancestor(&search_key)
+            });
         let delta = match key {
             gdk::Key::Down => Some(columns as isize),
             gdk::Key::Up => Some(-(columns as isize)),
-            gdk::Key::Right if !search_key.has_focus() => Some(1),
-            gdk::Key::Left if !search_key.has_focus() => Some(-1),
+            gdk::Key::Right if !search_focused => Some(1),
+            gdk::Key::Left if !search_focused => Some(-1),
             _ => None,
         };
         if let Some(delta) = delta {
@@ -310,7 +329,12 @@ pub fn show_picker(state: &State, target: Target) {
             let buttons: Vec<_> = ui
                 .cards
                 .iter()
-                .filter(|(_, b)| b.is_mapped())
+                .filter(|(layout, _)| {
+                    layout
+                        .title
+                        .to_lowercase()
+                        .contains(&search_key.text().to_lowercase().replace('_', " "))
+                })
                 .map(|(_, b)| b)
                 .collect();
             if !buttons.is_empty() {
@@ -323,7 +347,7 @@ pub fn show_picker(state: &State, target: Target) {
             }
             return glib::Propagation::Stop;
         }
-        if key == gdk::Key::slash && !search_key.has_focus() {
+        if key == gdk::Key::slash && !search_focused {
             search_key.grab_focus();
             return glib::Propagation::Stop;
         }
