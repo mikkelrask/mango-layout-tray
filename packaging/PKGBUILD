@@ -1,5 +1,5 @@
 pkgname=mango-layout-tray
-pkgver=0.1.3
+pkgver=0.1.4
 pkgrel=1
 pkgdesc='A visual layout picker for MangoWM in your system tray'
 arch=('x86_64' 'aarch64')

@@ -185,12 +185,13 @@ pub fn show_picker(state: &State, target: Target) {
     let context = label("", "dim-label");
     heading.append(&context);
     header.append(&heading);
-    let settings = gtk::Button::with_label("Settings");
-    if gdk::Display::default().is_some_and(|display| {
+    let settings = if gdk::Display::default().is_some_and(|display| {
         gtk::IconTheme::for_display(&display).has_icon("emblem-system-symbolic")
     }) {
-        settings.set_icon_name("emblem-system-symbolic");
-    }
+        gtk::Button::from_icon_name("emblem-system-symbolic")
+    } else {
+        gtk::Button::with_label("Settings")
+    };
     settings.add_css_class("flat");
     settings.set_tooltip_text(Some("Settings"));
     settings.connect_clicked(move |_| {
