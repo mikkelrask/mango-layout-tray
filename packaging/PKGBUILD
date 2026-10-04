@@ -7,7 +7,7 @@ url='https://github.com/mikkelrask/mango-layout-tray'
 license=('MIT')
 depends=('gtk4' 'gtk4-layer-shell')
 makedepends=('rust' 'git')
-optdepends=('mango: Wayland compositor controlled by this app')
+optdepends=('mangowm: Wayland compositor controlled by this app')
 source=("$pkgname::git+https://github.com/mikkelrask/mango-layout-tray.git#tag=v$pkgver")
 sha256sums=('SKIP')
 

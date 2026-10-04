@@ -110,7 +110,7 @@ fn main() -> glib::ExitCode {
             error: None,
             events: tx.clone(),
         };
-        let tray = match tray.spawn() {
+        let tray = match tray.assume_sni_available(true).spawn() {
             Ok(handle) => Some(handle),
             Err(e) => {
                 let _ = tx.try_send(Event::Error(format!("Cannot register system tray: {e}")));
