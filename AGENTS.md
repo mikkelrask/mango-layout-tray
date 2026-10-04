@@ -27,6 +27,15 @@ when available; write plain, specific prose either way.
 
 Commits may be pushed to origin. CI checks main and pull requests. Version tags
 (`v*`) build release archives and distro packages and publish GitHub releases.
+After pushing each new version tag, wait for the GitHub Actions release build to
+finish successfully and confirm its release assets are published. Then update
+the sibling AUR repository `../mango-layout-tray-bin`: bump `pkgver`, reset
+`pkgrel` to `1`, and pin the SHA256 checksum of the published GitHub archive.
+Regenerate `.SRCINFO` with `makepkg --printsrcinfo > .SRCINFO`, verify the package
+with `makepkg --cleanbuild --noconfirm`, then commit and push to its AUR remote.
+Verify the remote commit matches the local commit. A release is not complete
+until the AUR package is updated; report any publishing failure explicitly.
+
 Never commit local settings, secrets, build output, or temporary screenshots.
 
 `idea.md` is the original user-owned brief; do not overwrite it. The leftover
