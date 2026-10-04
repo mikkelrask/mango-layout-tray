@@ -30,7 +30,14 @@ glibc systems.
 
 ### Arch
 
-Build the included package after the matching version tag has been published:
+Install the prebuilt release from
+[AUR](https://aur.archlinux.org/packages/mango-layout-tray-bin):
+
+```sh
+yay -S mango-layout-tray-bin
+```
+
+Or build the included source package after the matching version tag has been published:
 
 ```sh
 mkdir mango-layout-tray-package
@@ -39,7 +46,8 @@ cd mango-layout-tray-package
 makepkg -si
 ```
 
-This is a PKGBUILD in this repository, not an AUR listing.
+The included `packaging/PKGBUILD` builds from source. The AUR package uses the
+GitHub release archive and does not need Rust.
 
 ### Ubuntu and Debian
 
