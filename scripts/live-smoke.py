@@ -38,7 +38,7 @@ def find(name=None, role=None):
     for node in walk(Atspi.get_desktop(0)):
         if node.get_role_name() == "application" and node.get_name() == "mango-layout-tray":
             for child in walk(node):
-                if (name is None or child.get_name() == name) and (role is None or child.get_role_name() == role):
+                if (name is None or child.get_name() == name) and (role is None or child.get_role_name() == role) and child.get_state_set().contains(Atspi.StateType.SHOWING):
                     return child
     return None
 
@@ -56,6 +56,11 @@ def wait_for(predicate, description):
 def click(name, role="button"):
     node = wait_for(lambda: find(name, role), f"Missing {name}")
     assert node.get_action_iface().do_action(0), name
+
+
+def open_picker():
+    subprocess.run([str(BINARY), "--show"], env=env, check=True)
+    wait_for(lambda: (entry := find(role="entry")) and entry.get_state_set().contains(Atspi.StateType.FOCUSED) and Atspi.Text.get_text(entry, 0, -1) == "", "Picker did not receive keyboard focus")
 
 
 def search(text):
@@ -94,7 +99,7 @@ with tempfile.TemporaryDirectory(prefix="mango-tray-smoke-") as directory:
             wait_for(lambda: find("Find your flow.", "label"), "Picker did not open")
             screenshot("compact.png")
             for layout in layouts:
-                subprocess.run([str(BINARY), "--show"], env=env, check=True)
+                open_picker()
                 search(layout["name"].replace("_", " "))
                 title = " ".join([layout["name"].split("_")[0].capitalize(), *layout["name"].split("_")[1:]])
                 click(title)
@@ -104,7 +109,7 @@ with tempfile.TemporaryDirectory(prefix="mango-tray-smoke-") as directory:
                 wait_for(lambda: f"[{layout['symbol'].lower()}]" in command("busctl", "--user", "get-property", service, "/StatusNotifierItem", "org.kde.StatusNotifierItem", "Title"), "Tray did not update")
             command("mmsg", "dispatch", f"setlayout,{original_layout}")
             wait_for(lambda: f"[{original['layout_symbol'].lower()}]" in command("busctl", "--user", "get-property", service, "/StatusNotifierItem", "org.kde.StatusNotifierItem", "Title"), "External layout change did not reach tray")
-            subprocess.run([str(BINARY), "--show"], env=env, check=True)
+            open_picker()
             search("zzzz")
             wait_for(lambda: find("No matching layouts. Try another name.", "label"), "Empty search state missing")
             search("")
@@ -127,25 +132,25 @@ with tempfile.TemporaryDirectory(prefix="mango-tray-smoke-") as directory:
             assert down.get_action_iface().do_action(0)
             wait_for(lambda: tomllib.loads(config_path.read_text()).get("order", [])[:3] == ["tile", "monocle", "scroller"], "Layout order did not persist")
             click("Done")
-            subprocess.run([str(BINARY), "--show"], env=env, check=True)
+            open_picker()
             wait_for(lambda: find("Find your flow.", "label"), "Drawer did not open")
             time.sleep(0.3)
             screenshot("drawer.png")
             if os.environ.get("WTYPE"):
                 wtype = os.environ["WTYPE"]
                 subprocess.run([wtype, "-k", "Escape"], check=True)
-                subprocess.run([str(BINARY), "--show"], env=env, check=True)
+                open_picker()
                 wait_for(lambda: find("Find your flow.", "label"), "Keyboard picker did not open")
                 subprocess.run([wtype, "dwindle"], check=True)
                 time.sleep(0.2)
                 subprocess.run([wtype, "-k", "Down", "-k", "Return"], check=True)
                 wait_for(lambda: next(m for m in monitors() if m["name"] == original["name"])["layout_symbol"] == "DW", "Keyboard selection failed")
-                subprocess.run([str(BINARY), "--show"], env=env, check=True)
+                open_picker()
                 wait_for(lambda: find("Find your flow.", "label"), "Picker did not reopen")
                 subprocess.run([wtype, "tile", "-k", "Return"], check=True)
                 wait_for(lambda: next(m for m in monitors() if m["name"] == original["name"])["layout_symbol"] == "T", "Search Enter failed")
                 command("mmsg", "dispatch", f"setlayout,{original_layout}")
-                subprocess.run([str(BINARY), "--show"], env=env, check=True)
+                open_picker()
                 wait_for(lambda: find("Find your flow.", "label"), "Picker did not reopen")
             click("Close (Escape)")
             # Standard StatusNotifier activation must reopen the same instance.
