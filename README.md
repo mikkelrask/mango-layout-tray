@@ -132,10 +132,17 @@ Add this to your Mango configuration:
 exec-once=mango-layout-tray
 ```
 
-Or enable “Start with the session” in Settings. That writes an XDG autostart
-entry pointing to the installed binary. A bare Mango session needs an XDG
-autostart runner, such as `dex`, to process it. Use either the config entry or
-the autostart runner. Startup is opt-in.
+Or enable “Start with the session” in Settings. The toggle adds a marked
+`exec-once` block to your Mango configuration, using the installed binary’s full
+path. It takes effect next session and needs no XDG autostart runner. Disabling
+it removes only that block. Existing startup commands are left alone. Use either
+the manual entry or the toggle. Startup is opt-in.
+
+The app uses the running compositor’s `-c` path when available, otherwise
+`~/.config/mango/config.conf`, matching Mango’s own default path.
+It preserves a backup before its first edit and follows configuration symlinks.
+Older XDG autostart entries are removed when you change the toggle; users
+upgrading from 0.1.1 should enable it again.
 
 If the app starts through a session service, make sure the service receives
 `WAYLAND_DISPLAY`, `DBUS_SESSION_BUS_ADDRESS`, and `MANGO_INSTANCE_SIGNATURE`.

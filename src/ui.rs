@@ -629,7 +629,7 @@ pub fn show_settings(state: &State) {
     text.set_hexpand(true);
     startup.append(&text);
     let start = gtk::Switch::builder()
-        .active(config::autostart_path().exists())
+        .active(config::autostart_enabled().unwrap_or(false))
         .valign(gtk::Align::Center)
         .build();
     startup.append(&start);
@@ -643,7 +643,7 @@ pub fn show_settings(state: &State) {
         glib::Propagation::Proceed
     });
     let note = label(
-        "Mango sessions need an XDG autostart runner, or an exec-once entry. See the README for both.",
+        "Adds an exec-once entry to your Mango configuration. Takes effect next session; disabling removes only the entry added here.",
         "hint",
     );
     note.set_wrap(true);

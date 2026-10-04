@@ -88,9 +88,12 @@ original = next(m for m in monitors() if m["active"])
 layouts = json.loads(command("mmsg", "get", "layouts"))["layouts"]
 original_layout = next(l["name"] for l in layouts if l["symbol"] == original["layout_symbol"])
 with tempfile.TemporaryDirectory(prefix="mango-tray-smoke-") as directory:
-    env = dict(os.environ, XDG_CONFIG_HOME=directory)
+    env = dict(os.environ, XDG_CONFIG_HOME=directory, HOME=directory)
     config_path = Path(directory) / "mango-layout-tray/config.toml"
     config_path.parent.mkdir()
+    startup_path = Path(directory) / ".config/mango/config.conf"
+    startup_path.parent.mkdir(parents=True)
+    startup_path.write_text("# Live smoke test\n")
     config_path.write_text(f'theme = "{os.environ.get("MANGO_SMOKE_THEME", "dark")}"\n')
     log_path = Path(directory) / "app.log"
     with log_path.open("w") as log:
@@ -122,11 +125,10 @@ with tempfile.TemporaryDirectory(prefix="mango-tray-smoke-") as directory:
             wait_for(lambda: "drawer = true" in config_path.read_text(), "Drawer setting did not persist")
             switches = [n for n in walk(switch.get_parent().get_parent()) if n.get_role_name() == "switch"]
             assert switches[1].get_action_iface().do_action(0)
-            autostart = Path(directory) / "autostart/mango-layout-tray.desktop"
-            wait_for(autostart.exists, "Autostart entry was not created")
-            assert str(BINARY) in autostart.read_text()
+            wait_for(lambda: "exec-once=" in startup_path.read_text(), "Mango startup entry was not created")
+            assert str(BINARY) in startup_path.read_text()
             assert switches[1].get_action_iface().do_action(0)
-            wait_for(lambda: not autostart.exists(), "Autostart entry was not removed")
+            wait_for(lambda: startup_path.read_text() == "# Live smoke test\n", "Mango startup entry was not removed")
             scroller = find("Scroller", "label")
             down = next(n for n in walk(scroller.get_parent()) if n.get_role_name() == "button" and n.get_name() == "Move down")
             assert down.get_action_iface().do_action(0)
