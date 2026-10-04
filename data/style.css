@@ -1,0 +1,25 @@
+window.mango-overlay { background: transparent; }
+.backdrop, .backdrop:hover, .backdrop:active { background: transparent; border: none; box-shadow: none; border-radius: 0; }
+.picker { background: @theme_bg_color; color: @theme_fg_color; border: 1px solid alpha(@theme_fg_color, 0.16); border-radius: 18px; box-shadow: 0 12px 40px alpha(black, 0.22); }
+.header { padding: 22px 20px 16px; }
+.title { font-size: 25px; font-weight: 700; letter-spacing: -0.6px; }
+.subtitle { font-weight: 600; }
+.dim-label { opacity: 0.65; font-size: 12px; }
+.search { margin: 0 20px 12px; border-radius: 10px; }
+.layouts { padding: 4px 14px 12px; }
+flowboxchild { padding: 0; border-radius: 12px; }
+.layout-card { border: 1px solid alpha(@theme_fg_color, 0.12); border-radius: 12px; background: alpha(@theme_fg_color, 0.025); }
+.layout-choice { padding: 12px 10px 4px; background: transparent; border: none; box-shadow: none; border-radius: 11px 11px 0 0; }
+.layout-choice:hover { background: alpha(@theme_selected_bg_color, 0.12); }
+.layout-choice:focus-visible { outline: 2px solid @theme_selected_bg_color; outline-offset: -2px; }
+.layout-choice.current { color: @theme_selected_bg_color; background: alpha(@theme_selected_bg_color, 0.12); }
+.layout-name { font-size: 12px; font-weight: 600; }
+.card-meta { padding: 0 8px 4px 10px; }
+.symbol { font-family: monospace; font-size: 11px; opacity: 0.5; }
+.favorite { min-height: 20px; min-width: 20px; padding: 0 2px; color: alpha(@theme_fg_color, 0.25); }
+.favorite:checked { color: @theme_selected_bg_color; background: transparent; }
+.favorite:hover { color: @theme_selected_bg_color; }
+.footer { padding: 12px 20px 18px; border-top: 1px solid alpha(@theme_fg_color, 0.10); }
+.hint { font-size: 11px; opacity: 0.55; }
+.error { color: @error_color; opacity: 1; }
+.settings-content { padding: 24px; }

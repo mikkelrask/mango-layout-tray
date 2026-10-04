@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Mango Layout Tray
+Comment=Choose a MangoWM layout from visual previews
+Exec=mango-layout-tray --show
+Icon=mango-layout-tray
+Terminal=false
+Categories=Utility;
+Keywords=mango;layout;tiling;window;
+StartupNotify=false
