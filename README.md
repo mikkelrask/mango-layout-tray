@@ -148,6 +148,20 @@ If the app starts through a session service, make sure the service receives
 `WAYLAND_DISPLAY`, `DBUS_SESSION_BUS_ADDRESS`, and `MANGO_INSTANCE_SIGNATURE`.
 Starting it from Mango's `exec-once` avoids that environment mismatch.
 
+## Layer blur and shadows
+
+If the picker has a blurred rectangle around it, Mango may be applying layer
+blur or shadows to its transparent overlay. The picker draws its own opaque
+panel and soft shadow; disable compositor effects for this layer only:
+
+```ini
+layerrule=noblur:1,noshadow:1,layer_name:^mango-layout-tray$
+```
+
+Add the rule to your Mango configuration, reload it, and reopen the picker.
+Other applications keep their existing blur and shadow settings. The same rule
+covers the drawer and Settings overlay.
+
 ## Configuration
 
 Settings are saved atomically to
