@@ -107,6 +107,9 @@ A left click opens the picker on the monitor under the pointer. Right click
 opens the standard tray menu, including quick layout selection. Running the
 command again reuses the existing instance.
 
+The Settings button uses your icon theme’s gear, or a text label when that
+icon is unavailable.
+
 Type to filter, use arrow keys to browse, and press Enter to apply. Escape or a
 click outside closes the picker. `Ctrl+,` opens Settings. Star layouts to bring
 them to the front; Settings also lets you change their order and switch between
