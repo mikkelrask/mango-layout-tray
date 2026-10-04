@@ -213,4 +213,103 @@ mod tests {
         worker.join().unwrap();
         std::fs::remove_file(path).unwrap();
     }
+    fn mock(
+        name: &str,
+        responses: Vec<(&'static str, &'static str)>,
+    ) -> (Ipc, std::thread::JoinHandle<()>) {
+        use std::os::unix::net::UnixListener;
+        let path =
+            std::env::temp_dir().join(format!("mango-tray-{}-{name}.sock", std::process::id()));
+        let listener = UnixListener::bind(&path).unwrap();
+        let cleanup = path.clone();
+        let worker = std::thread::spawn(move || {
+            for (expected, response) in responses {
+                let (mut stream, _) = listener.accept().unwrap();
+                let mut command = String::new();
+                BufReader::new(stream.try_clone().unwrap())
+                    .read_line(&mut command)
+                    .unwrap();
+                assert_eq!(command.trim_end(), expected);
+                writeln!(stream, "{response}").unwrap();
+            }
+            std::fs::remove_file(cleanup).unwrap();
+        });
+        (Ipc { path }, worker)
+    }
+
+    #[test]
+    fn applies_to_invoked_monitor_and_restores_focus() {
+        let before = r#"{"monitors":[{"name":"DP-1","active":true,"active_tags":[1],"layout_symbol":"M"},{"name":"DP-2","active":false,"active_tags":[3],"layout_symbol":"CT"}]}"#;
+        let focused = r#"{"monitors":[{"name":"DP-1","active":false,"active_tags":[1],"layout_symbol":"M"},{"name":"DP-2","active":true,"active_tags":[3],"layout_symbol":"CT"}]}"#;
+        let after = r#"{"monitors":[{"name":"DP-1","active":false,"active_tags":[1],"layout_symbol":"M"},{"name":"DP-2","active":true,"active_tags":[3],"layout_symbol":"T"}]}"#;
+        let (ipc, worker) = mock(
+            "monitor",
+            vec![
+                ("get all-monitors", before),
+                ("dispatch focusmon,DP-2", r#"{"success":true}"#),
+                ("get all-monitors", focused),
+                ("dispatch setlayout,tile", r#"{"success":true}"#),
+                ("get all-monitors", after),
+                ("dispatch focusmon,DP-1", r#"{"success":true}"#),
+            ],
+        );
+        ipc.apply(
+            &Target {
+                monitor: "DP-2".into(),
+                tags: vec![3],
+            },
+            "tile",
+        )
+        .unwrap();
+        worker.join().unwrap();
+    }
+
+    #[test]
+    fn changed_tags_refuse_selection_without_dispatch() {
+        let (ipc, worker) = mock(
+            "tags",
+            vec![(
+                "get all-monitors",
+                r#"{"monitors":[{"name":"DP-2","active":true,"active_tags":[4],"layout_symbol":"CT"}]}"#,
+            )],
+        );
+        let error = ipc
+            .apply(
+                &Target {
+                    monitor: "DP-2".into(),
+                    tags: vec![3],
+                },
+                "tile",
+            )
+            .unwrap_err();
+        assert!(error.to_string().contains("active tags changed"));
+        worker.join().unwrap();
+    }
+
+    #[test]
+    fn failed_selection_still_restores_monitor_focus() {
+        let before = r#"{"monitors":[{"name":"DP-1","active":true,"active_tags":[1]},{"name":"DP-2","active":false,"active_tags":[3]}]}"#;
+        let focused = r#"{"monitors":[{"name":"DP-1","active":false,"active_tags":[1]},{"name":"DP-2","active":true,"active_tags":[3]}]}"#;
+        let (ipc, worker) = mock(
+            "restore",
+            vec![
+                ("get all-monitors", before),
+                ("dispatch focusmon,DP-2", r#"{"success":true}"#),
+                ("get all-monitors", focused),
+                ("dispatch setlayout,tile", r#"{"error":"failed"}"#),
+                ("dispatch focusmon,DP-1", r#"{"success":true}"#),
+            ],
+        );
+        assert!(
+            ipc.apply(
+                &Target {
+                    monitor: "DP-2".into(),
+                    tags: vec![3]
+                },
+                "tile"
+            )
+            .is_err()
+        );
+        worker.join().unwrap();
+    }
 }

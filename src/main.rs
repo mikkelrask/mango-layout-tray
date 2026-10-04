@@ -23,6 +23,7 @@ enum Event {
     Quit,
     State(Vec<Monitor>),
     Error(String),
+    ConnectionError(String),
     Applied,
 }
 
@@ -76,9 +77,10 @@ fn main() -> glib::ExitCode {
             return glib::ExitCode::SUCCESS;
         }
         app.activate();
+        let was_initialized = init.replace(true);
         if options.contains("settings") {
             let _ = events.try_send(Event::Settings);
-        } else if options.contains("show") || init.replace(true) {
+        } else if options.contains("show") || was_initialized {
             let _ = events.try_send(Event::Open(false));
         }
         glib::ExitCode::SUCCESS
@@ -142,6 +144,18 @@ fn main() -> glib::ExitCode {
                             window.hide();
                         }
                     }
+                    Event::ConnectionError(error) => {
+                        eprintln!("{error}");
+                        if let Some(tray) = &tray {
+                            tray.update(|t| {
+                                t.error = Some(error.clone());
+                                t.symbol = "?".into();
+                            });
+                        }
+                        if let Some(status) = &state.borrow().status {
+                            status.set_text(&error);
+                        }
+                    }
                     Event::Error(error) => {
                         eprintln!("{error}");
                         if let Some(tray) = &tray {
@@ -185,7 +199,7 @@ fn start_workers(events: Sender<Event>, jobs: std::sync::mpsc::Receiver<Job>) {
             });
             if let Err(error) = result {
                 if update
-                    .send_blocking(Event::Error(format!("{error:#}")))
+                    .send_blocking(Event::ConnectionError(format!("{error:#}")))
                     .is_err()
                 {
                     break;

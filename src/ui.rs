@@ -21,9 +21,10 @@ pub struct Ui {
     error_window: Option<gtk::ApplicationWindow>,
     target: Option<Target>,
     cards: Vec<(Layout, gtk::Button)>,
-    status: Option<gtk::Label>,
+    pub status: Option<gtk::Label>,
     context: Option<gtk::Label>,
     system_dark: bool,
+    system_theme: Option<glib::GString>,
 }
 
 impl Ui {
@@ -43,6 +44,7 @@ impl Ui {
         }
         let system_dark =
             gtk::Settings::default().is_some_and(|s| s.is_gtk_application_prefer_dark_theme());
+        let system_theme = gtk::Settings::default().and_then(|s| s.gtk_theme_name());
         let ui = Self {
             app,
             config,
@@ -57,12 +59,18 @@ impl Ui {
             status: None,
             context: None,
             system_dark,
+            system_theme,
         };
         ui.theme();
         ui
     }
     fn theme(&self) {
         if let Some(settings) = gtk::Settings::default() {
+            settings.set_gtk_theme_name(if self.config.theme == Theme::System {
+                self.system_theme.as_deref()
+            } else {
+                Some("Adwaita")
+            });
             settings.set_gtk_application_prefer_dark_theme(match self.config.theme {
                 Theme::System => self.system_dark,
                 Theme::Light => false,
@@ -75,7 +83,9 @@ impl Ui {
 fn label(text: &str, class: &str) -> gtk::Label {
     let label = gtk::Label::new(Some(text));
     label.set_xalign(0.);
-    label.add_css_class(class);
+    if !class.is_empty() {
+        label.add_css_class(class);
+    }
     label
 }
 fn vertical(spacing: i32) -> gtk::Box {
@@ -132,6 +142,18 @@ pub fn show_picker(state: &State, target: Target) {
         old.close();
     }
     let window = layer_window(&app, Some(&target.monitor));
+    let geometry = gdk::Display::default().and_then(|d| {
+        let list = d.monitors();
+        (0..list.n_items())
+            .filter_map(|i| list.item(i).and_downcast::<gdk::Monitor>())
+            .find(|m| m.connector().as_deref() == Some(target.monitor.as_str()))
+            .map(|m| m.geometry())
+    });
+    let narrow = geometry.is_some_and(|g| g.width() < 720);
+    let columns = if config.drawer || narrow { 2 } else { 4 };
+    let viewport_height = geometry
+        .map(|g| (g.height() - 260).clamp(180, 600))
+        .unwrap_or(520);
     let overlay = gtk::Overlay::new();
     let backdrop = gtk::Button::new();
     backdrop.add_css_class("backdrop");
@@ -154,7 +176,7 @@ pub fn show_picker(state: &State, target: Target) {
     panel.set_margin_top(if config.drawer { 12 } else { 24 });
     panel.set_margin_bottom(12);
     panel.set_margin_end(16);
-    panel.set_size_request(if config.drawer { 410 } else { 664 }, -1);
+    panel.set_size_request(if config.drawer || narrow { 410 } else { 664 }, -1);
     let header = row(12);
     header.add_css_class("header");
     let heading = vertical(4);
@@ -190,15 +212,15 @@ pub fn show_picker(state: &State, target: Target) {
         .vexpand(true)
         .build();
     if !config.drawer {
-        scroll.set_min_content_height(450);
-        scroll.set_max_content_height(520);
+        scroll.set_min_content_height(viewport_height);
+        scroll.set_max_content_height(viewport_height);
         scroll.set_propagate_natural_height(true);
     }
     let grid = gtk::FlowBox::builder()
         .selection_mode(gtk::SelectionMode::None)
         .homogeneous(true)
-        .min_children_per_line(if config.drawer { 2 } else { 4 })
-        .max_children_per_line(if config.drawer { 2 } else { 4 })
+        .min_children_per_line(columns)
+        .max_children_per_line(columns)
         .row_spacing(8)
         .column_spacing(8)
         .build();
@@ -264,7 +286,7 @@ pub fn show_picker(state: &State, target: Target) {
     let weak = window.downgrade();
     let state_key = state.clone();
     let search_key = search.clone();
-    let columns = if config.drawer { 2usize } else { 4 };
+    let columns = columns as usize;
     controller.connect_key_pressed(move |_, key, _, modifiers| {
         if key == gdk::Key::Escape {
             if let Some(w) = weak.upgrade() {
@@ -526,12 +548,13 @@ pub fn show_settings(state: &State) {
         return;
     }
     let ui = state.borrow();
-    let window = gtk::ApplicationWindow::builder()
-        .application(&ui.app)
-        .title("Mango · Settings")
-        .default_width(440)
-        .default_height(660)
-        .build();
+    let monitor = ui
+        .monitors
+        .iter()
+        .find(|m| m.active)
+        .map(|m| m.name.as_str());
+    let window = layer_window(&ui.app, monitor);
+    window.set_title(Some("Mango · Settings"));
     let content = vertical(18);
     content.add_css_class("settings-content");
     content.append(&label("Make it yours.", "title"));
@@ -623,7 +646,25 @@ pub fn show_settings(state: &State) {
         }
     });
     content.append(&close);
-    window.set_child(Some(&content));
+    let overlay = gtk::Overlay::new();
+    let backdrop = gtk::Button::new();
+    backdrop.add_css_class("backdrop");
+    backdrop.set_can_focus(false);
+    let weak = window.downgrade();
+    backdrop.connect_clicked(move |_| {
+        if let Some(w) = weak.upgrade() {
+            w.hide();
+        }
+    });
+    overlay.set_child(Some(&backdrop));
+    content.add_css_class("picker");
+    content.set_halign(gtk::Align::Center);
+    content.set_valign(gtk::Align::Center);
+    content.set_size_request(440, 660);
+    content.set_margin_top(16);
+    content.set_margin_bottom(16);
+    overlay.add_overlay(&content);
+    window.set_child(Some(&overlay));
     drop(ui);
     build_order(state, &order);
     state.borrow_mut().settings = Some(window.clone());
@@ -664,11 +705,14 @@ fn build_order(state: &State, container: &gtk::Box) {
             let button = gtk::Button::from_icon_name(icon);
             button.add_css_class("flat");
             button.set_tooltip_text(Some(help));
-            button.set_sensitive(if delta < 0 {
-                index > 0
-            } else {
-                index + 1 < layouts.len()
-            });
+            let next = index as isize + delta;
+            let favorites = &state.borrow().config.favorites;
+            button.set_sensitive(
+                next >= 0
+                    && (next as usize) < layouts.len()
+                    && favorites.iter().any(|f| f == layout.name)
+                        == favorites.iter().any(|f| f == layouts[next as usize].name),
+            );
             let st = state.clone();
             let list = container.clone();
             button.connect_clicked(move |_| {
