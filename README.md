@@ -3,7 +3,8 @@
 Pick a MangoWM layout without remembering its name or binding. Click the tray
 indicator, choose a wireframe preview, and get back to your windows.
 
-The indicator shows the current layout, such as `[t]` or `[ct]`, and follows
+The indicator uses large capitals, such as `T` or `CT`, with the bracketed
+abbreviation in its tooltip. It follows
 changes made through keyboard shortcuts. The picker targets the monitor where
 you invoked it. It supports all 14 MangoWM layouts, search, favorites, a compact
 view, and a taller drawer. Colors come from your GTK theme; light and dark

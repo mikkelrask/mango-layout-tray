@@ -23,7 +23,10 @@ impl ksni::Tray for Tray {
         let _ = self.events.try_send(Event::Open(true));
     }
     fn icon_pixmap(&self) -> Vec<Icon> {
-        vec![icon(&self.symbol, 64), icon(&self.symbol, 32)]
+        [16, 22, 24, 32, 48, 64]
+            .into_iter()
+            .map(|size| icon(&self.symbol, size))
+            .collect()
     }
     fn tool_tip(&self) -> ToolTip {
         let name = by_symbol(&self.symbol)
@@ -31,10 +34,13 @@ impl ksni::Tray for Tray {
             .unwrap_or("Waiting for MangoWM");
         ToolTip {
             title: "Mango Layout Tray".into(),
-            description: self
-                .error
-                .clone()
-                .unwrap_or_else(|| format!("{name} · {}\nClick to choose a layout", self.monitor)),
+            description: self.error.clone().unwrap_or_else(|| {
+                format!(
+                    "{name} [{}] · {}\nClick to choose a layout",
+                    self.symbol.to_lowercase(),
+                    self.monitor
+                )
+            }),
             ..Default::default()
         }
     }
@@ -100,17 +106,25 @@ fn icon(symbol: &str, size: i32) -> Icon {
     let mut surface = ImageSurface::create(Format::ARgb32, size, size).unwrap();
     {
         let cr = Context::new(&surface).unwrap();
-        cr.select_font_face("monospace", FontSlant::Normal, FontWeight::Bold);
-        let label = format!("[{}]", symbol.to_lowercase());
-        cr.set_font_size(size as f64 * if label.len() > 3 { 0.30 } else { 0.38 });
+        cr.select_font_face("sans-serif", FontSlant::Normal, FontWeight::Bold);
+        let label = symbol.to_uppercase();
+        cr.set_font_size(size as f64);
         let ext = cr.text_extents(&label).unwrap();
-        cr.move_to(
-            (size as f64 - ext.width()) / 2. - ext.x_bearing(),
-            (size as f64 - ext.height()) / 2. - ext.y_bearing(),
+        let inset = (size as f64 * 0.06).max(1.);
+        let available = size as f64 - inset * 2.;
+        let scale_y = available / ext.height().max(1.);
+        let scale_x = (available / ext.width().max(1.)).min(scale_y);
+        cr.save().unwrap();
+        cr.translate(
+            (size as f64 - ext.width() * scale_x) / 2.,
+            (size as f64 - ext.height() * scale_y) / 2.,
         );
+        cr.scale(scale_x, scale_y);
+        cr.move_to(-ext.x_bearing(), -ext.y_bearing());
         cr.text_path(&label);
+        cr.restore().unwrap();
         cr.set_source_rgba(0.08, 0.08, 0.08, 0.9);
-        cr.set_line_width(size as f64 * 0.045);
+        cr.set_line_width((size as f64 * 0.025).max(1.));
         let _ = cr.stroke_preserve();
         cr.set_source_rgb(0.98, 0.98, 0.98);
         let _ = cr.fill();
