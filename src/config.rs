@@ -5,6 +5,7 @@ use std::path::PathBuf;
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
+    pub top_margin: Option<u32>,
     pub drawer: bool,
     pub theme: Theme,
     pub favorites: Vec<String>,
@@ -43,6 +44,9 @@ impl Config {
         Ok(config)
     }
     pub fn validate(&self) -> Result<()> {
+        if self.top_margin.is_some_and(|margin| margin > 500) {
+            bail!("Top margin must be between 0 and 500 pixels");
+        }
         for name in self.favorites.iter().chain(&self.order) {
             if crate::layout::by_name(name).is_none() {
                 bail!("Unknown layout in configuration: {name}");

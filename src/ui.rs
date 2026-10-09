@@ -17,6 +17,7 @@ pub struct Ui {
     pub jobs: Option<std::sync::mpsc::Sender<Job>>,
     pub monitors: Vec<Monitor>,
     pub picker: Option<gtk::ApplicationWindow>,
+    picker_panel: Option<gtk::Box>,
     settings: Option<gtk::ApplicationWindow>,
     error_window: Option<gtk::ApplicationWindow>,
     target: Option<Target>,
@@ -52,6 +53,7 @@ impl Ui {
             jobs: None,
             monitors: vec![],
             picker: None,
+            picker_panel: None,
             settings: None,
             error_window: None,
             target: None,
@@ -173,7 +175,11 @@ pub fn show_picker(state: &State, target: Target) {
     } else {
         gtk::Align::Start
     });
-    panel.set_margin_top(if config.drawer { 12 } else { 24 });
+    panel.set_margin_top(
+        config
+            .top_margin
+            .unwrap_or(if config.drawer { 12 } else { 24 }) as i32,
+    );
     panel.set_margin_bottom(12);
     panel.set_margin_end(16);
     panel.set_size_request(if config.drawer || narrow { 410 } else { 664 }, -1);
@@ -374,6 +380,7 @@ pub fn show_picker(state: &State, target: Target) {
         ui.cards = cards;
         ui.status = Some(status);
         ui.context = Some(context);
+        ui.picker_panel = Some(panel.clone());
         ui.picker = Some(window.clone());
     }
     refresh(state);
@@ -603,6 +610,33 @@ pub fn show_settings(state: &State) {
     let st = state.clone();
     drawer.connect_active_notify(move |switch| {
         st.borrow_mut().config.drawer = switch.is_active();
+        save(&st);
+    });
+    let margin_row = row(12);
+    let text = label("Top margin (px)", "subtitle");
+    text.set_hexpand(true);
+    margin_row.append(&text);
+    let margin = gtk::SpinButton::with_range(0., 500., 1.);
+    margin.set_value(
+        ui.config
+            .top_margin
+            .unwrap_or(if ui.config.drawer { 12 } else { 24 })
+            .into(),
+    );
+    margin.set_tooltip_text(Some(
+        "Distance from the top of the screen in logical pixels",
+    ));
+    margin_row.append(&margin);
+    content.append(&margin_row);
+    let st = state.clone();
+    margin.connect_value_changed(move |spin| {
+        {
+            let mut ui = st.borrow_mut();
+            ui.config.top_margin = Some(spin.value_as_int() as u32);
+            if let Some(panel) = &ui.picker_panel {
+                panel.set_margin_top(spin.value_as_int());
+            }
+        }
         save(&st);
     });
     let theme_row = row(12);

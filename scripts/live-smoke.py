@@ -29,6 +29,8 @@ def monitors():
 
 
 def walk(node):
+    if node is None:
+        return
     yield node
     for i in range(node.get_child_count()):
         yield from walk(node.get_child_at_index(i))
@@ -80,7 +82,7 @@ def screenshot(name):
     # GTK cannot report global Wayland positions. Use our documented anchors.
     monitor = next(m for m in monitors() if m["active"])
     x = monitor["x"] + monitor["width"] - 16 - rect.width
-    y = monitor["y"] + (12 if name == "drawer.png" else 24)
+    y = monitor["y"] + tomllib.loads(config_path.read_text()).get("top_margin", 12 if name == "drawer.png" else 24)
     command("grim", "-g", f"{x},{y} {rect.width}x{rect.height}", str(output / name))
 
 
@@ -120,6 +122,9 @@ with tempfile.TemporaryDirectory(prefix="mango-tray-smoke-") as directory:
             wait_for(lambda: 'favorites = ["tile"]' in config_path.read_text(), "Favorite did not persist")
             click("Settings")
             wait_for(lambda: find("Make it yours.", "label"), "Settings did not open")
+            margin = find(role="spin button")
+            assert margin.get_value_iface().set_current_value(72)
+            wait_for(lambda: tomllib.loads(config_path.read_text()).get("top_margin") == 72, "Top margin did not persist")
             switch = find(role="switch")
             assert switch.get_action_iface().do_action(0)
             wait_for(lambda: "drawer = true" in config_path.read_text(), "Drawer setting did not persist")

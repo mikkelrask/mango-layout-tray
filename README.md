@@ -229,3 +229,8 @@ Arch with MangoWM. Fedora and Ubuntu desktop testing is still needed.
 
 MIT licensed. Layout names and behavior follow the
 [MangoWM layout documentation](https://mangowm.github.io/docs/window-management/layouts/).
+
+The **Top margin (px)** setting positions the popup below your bar. It accepts
+0–500 logical pixels, applies immediately, and is saved as `top_margin` in the
+app configuration. The compact picker defaults to 24 pixels and the drawer
+to 12 until you choose a custom margin.
